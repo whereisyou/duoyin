@@ -1,0 +1,40 @@
+# Rust
+src-tauri/target/
+
+# Build
+_static/
+dist/
+
+# Dependencies
+node_modules/
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+*.sw?
+
+# Refactor backup
+.refactor-backup/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# User config
+config.json
+
+# Tauri generated
+src-tauri/gen/schemas/
+
+# Large model files
+*.onnx
+*.safetensors
+*.bin
+*.pt
+*.zip
+*.wav
+*.mp4
+*.mp3
