@@ -1,0 +1,97 @@
+[package]
+name = "duoyin"
+version = "0.1.0"
+description = "视频翻译 - Rust Tauri"
+authors = ["you"]
+edition = "2021"
+
+# === 编译优化 ===
+# dev 模式：保持默认并行（内存峰值低），开增量编译
+# release：LTO + 单代码生成单元，体积最小
+[profile.dev]
+incremental = true
+# 只保留行号表（debug=1），不含变量/类型调试数据：大幅削减 candle/ort/sherpa 等大依赖的
+# 调试符号体积（target/debug ~28G → 重编后 ~6-8G）。crash.log/panic backtrace 的 file:line
+# 行号不受影响（日志/崩溃排查照常）。代价：GUI 调试器里看不到变量值。
+# 如需恢复完整调试信息：改回 debug = 2 并重新全量编译。
+debug = 1
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = "symbols"
+
+[profile.dev.package."*"]
+# 第三方依赖用 opt-level=1 提高编译速度（candle 等大型 crate 编译快 30-50%）
+opt-level = 1
+
+[lib]
+name = "videotrans_tauri_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+# === 推理 feature：开发 UI 时用 --no-default-features 编译极快 ===
+# 跑完整任务时用默认（或 cargo tauri dev --features inference）
+[features]
+default = ["inference"]
+inference = [
+    "candle-core",
+    "candle-nn",
+    "candle-transformers",
+    "tokenizers",
+    "ort",
+    "ort-sys",
+    "ndarray",
+    "rand",
+    "rand_distr",
+    "rustfft",
+    "unicode-normalization",
+    "regex",
+    "byteorder",
+    "anyhow",
+    "sherpa-onnx",
+]
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "fs", "io-util", "process", "signal"] }
+reqwest = { version = "0.12", features = ["json", "multipart"] }
+uuid = { version = "1", features = ["v4"] }
+sha2 = "0.10"
+futures = "0.3"
+once_cell = "1"
+dirs-next = "2"
+rfd = "0.17"
+# 日志：log 门面 + simplelog 双输出（stderr + 文件）；time 仅用于时间戳格式化
+log = "0.4"
+simplelog = { version = "0.12", default-features = false }
+time = { version = "0.3", features = ["formatting", "macros", "local-offset"] }
+# commit 可用内存查询（内存预审用；tauri 已传递依赖同版本，零额外编译）
+windows = { version = "0.61", features = ["Win32_System_SystemInformation", "Win32_Storage_FileSystem"] }
+
+# ─── 推理相关（feature: inference）───
+candle-core = { version = "0.11", optional = true }
+candle-nn = { version = "0.11", optional = true }
+candle-transformers = { version = "0.11", optional = true }
+tokenizers = { version = "0.21", optional = true }
+ort = { version = "=2.0.0-rc.13", features = ["load-dynamic"], optional = true }
+ort-sys = { version = "=2.0.0-rc.13", optional = true }
+ndarray = { version = "0.17", optional = true }
+rand = { version = "0.8", optional = true }
+rand_distr = { version = "0.4", optional = true }
+rustfft = { version = "6.2", optional = true }
+unicode-normalization = { version = "0.1", optional = true }
+regex = { version = "1", optional = true }
+hound = "3.5"
+byteorder = { version = "1", optional = true }
+anyhow = { version = "1", optional = true }
+# SenseVoice STT：官方绑定，构建时自动下载预编译库（零 CMake）
+# 必须用 shared（DLL）：static 预编译库用了比本机更新的 MSVC 编译，
+# 链接时报 __std_search_1 未解析；shared 模式符号在 DLL 内部自闭合
+sherpa-onnx = { version = "=1.13.5", default-features = false, features = ["shared"], optional = true }
