@@ -1,0 +1,4 @@
+# 限制并行编译数：本机虚拟内存有限，rustc 编译 candle/tao 等大 crate 时
+# 并行任务过多会触发 "failed to mmap rmeta" (os error 1455 页面文件太小)
+[build]
+jobs = 2
